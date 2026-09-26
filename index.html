@@ -628,7 +628,7 @@ footer a:hover{color:var(--text)}
   let W = 0, H = 0, dpr = 1, S = 1, OX = 0, OY = 0, cinTop = 0, cinH = 0, mfTop = 0, mfH = 0, docH = 0;
   let shadow = null, glow = null;
   function resize() {
-    W = stage.clientWidth; H = stage.clientHeight; dpr = Math.min(devicePixelRatio || 1, 2);
+    W = stage.clientWidth || innerWidth; H = stage.clientHeight || innerHeight; dpr = Math.min(devicePixelRatio || 1, 2);
     cv.width = glc.width = Math.round(W * dpr); cv.height = glc.height = Math.round(H * dpr);
     S = Math.min(W * .92 / WIN.w, H * .64 / WIN.h);
     OX = W / 2 - 500 * S; OY = H * .46 - 320 * S;
@@ -652,9 +652,13 @@ footer a:hover{color:var(--text)}
     c.beginPath(); c.moveTo(x + r, y); c.arcTo(x + w, y, x + w, y + h, r); c.arcTo(x + w, y + h, x, y + h, r);
     c.arcTo(x, y + h, x, y, r); c.arcTo(x, y, x + w, y, r); c.closePath();
   };
-  let rzT; addEventListener('resize', () => { clearTimeout(rzT); rzT = setTimeout(resize, 120); });
+  let rzT;
+  const queueResize = () => { clearTimeout(rzT); rzT = setTimeout(resize, 120); };
+  addEventListener('resize', queueResize);
+  // medidas mudam sem 'resize' (fontes, "Ver todos", separador aberto em segundo plano)
+  new ResizeObserver(queueResize).observe(document.body);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) resize(); });
   resize();
-  addEventListener('load', resize);
 
   const mouse = { x: -999, y: -999, tx: -999, ty: -999 };
   addEventListener('pointermove', e => { mouse.tx = (e.clientX - OX) / S; mouse.ty = (e.clientY - OY) / S; }, { passive: true });
@@ -689,8 +693,8 @@ footer a:hover{color:var(--text)}
     requestAnimationFrame(frame);
     const dt = Math.min(now - (lastT || now), 1000); lastT = now; time = now;
     const sy = scrollY;
-    const target = clamp((sy - cinTop) / (cinH - H));
-    cur = cur < 0 || reduce ? target : cur + (target - cur) * (1 - Math.pow(.88, dt / 16.7));
+    const target = clamp((sy - cinTop) / Math.max(1, cinH - H));
+    cur = !(cur >= 0) || reduce ? target : cur + (target - cur) * (1 - Math.pow(.88, dt / 16.7));
     if (Math.abs(target - cur) < 1e-4) cur = target;
     const p = cur;
 
